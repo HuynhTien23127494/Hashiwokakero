@@ -6,9 +6,16 @@ from pysat.formula import IDPool
 from pysat.solvers import Solver
 from collections import defaultdict, deque
 
+# Đọc file input
 def read_input(filename):
     with open(filename, 'r') as f:
-        return [list(map(int, line.strip().split(','))) for line in f if line.strip()]
+        lines = [line.strip() for line in f if line.strip()]
+        if not lines:
+            print(f"Warning: {filename} is empty or invalid format.")
+            return []
+        return [list(map(int, line.split(','))) for line in lines]
+
+# Ghi output ra file
 def write_solution(grid, edges, output_file):
     rows, cols = len(grid), len(grid[0])
     board = [[str(cell) if cell != 0 else '0' for cell in row] for row in grid]
@@ -24,7 +31,7 @@ def write_solution(grid, edges, output_file):
     with open(output_file, 'w') as f:
         for row in board:
             f.write('[ ' + ' , '.join(f'"{cell}"' for cell in row) + ' ]\n')
-            
+
 # Kiểm tra 2 cạnh cắt nhau
 def edges_cross(e1, e2):
     (x1, y1, x2, y2) = e1
@@ -38,7 +45,6 @@ def edges_cross(e1, e2):
             return True
     return False
 
-# Tạo CNF
 def generateCNF(grid):
     rows, cols = len(grid), len(grid[0])
     vpool = IDPool()
@@ -46,8 +52,8 @@ def generateCNF(grid):
     edge_vars = {}
     reverse_map = {}
     island_map = {}
-    
-    # Tạo biến, ràng buộc không quá 2 cầu
+
+    # Tạo biến & ràng buộc tối đa 2 cầu
     for x in range(rows):
         for y in range(cols):
             if grid[x][y] == 0:
@@ -64,7 +70,7 @@ def generateCNF(grid):
                     edge_vars[(x, y, x, dy)] = (v1, v2)
                     reverse_map[v1] = (x, y, x, dy, 1)
                     reverse_map[v2] = (x, y, x, dy, 2)
-                    cnf.append([-v1, -v2])  
+                    cnf.append([-v1, -v2])
                 break
 
             # xuống dưới
@@ -94,7 +100,7 @@ def generateCNF(grid):
             card = CardEnc.equals(lits=expanded, bound=total, vpool=vpool, encoding=1)
             cnf.extend(card.clauses)
 
-    # Hai cầu không cắt nhau
+    # Ràng buộc không cắt nhau
     edges = list(edge_vars.keys())
     for i in range(len(edges)):
         for j in range(i + 1, len(edges)):
@@ -114,7 +120,7 @@ def generateCNF(grid):
         'vpool': vpool
     }
 
-# Kiểm tra tính liên thông
+# Kiểm tra liên thông
 def is_connected(edges, islands):
     graph = defaultdict(list)
     for x1, y1, x2, y2, _ in edges:
@@ -129,11 +135,14 @@ def is_connected(edges, islands):
         if node not in visited:
             visited.add(node)
             queue.extend(graph[node])
-
     return len(visited) == len(islands)
 
-# Giải bằng pySAT
+# Giải pySAT
 def solve_hashi(grid):
+    if not grid or not grid[0]:
+        print("Empty or invalid grid.")
+        return None
+
     data = generateCNF(grid)
     cnf = data['cnf']
     solver = Solver(name='glucose3')
@@ -159,10 +168,14 @@ def solve_hashi(grid):
     return None
 
 if __name__ == '__main__':
-    for i in range(1, 2): 
-        input_file = f"input-{i:02}.txt"
-        output_file = f"output-{i:02}.txt"
+    for i in range(1, 11): 
+        input_file = f"Inputs\\input-{i:02}.txt"
+        output_file = f"Outputs\\output-{i:02}.txt"
         grid = read_input(input_file)
+        if not grid:
+            with open(output_file, 'w') as f:
+                f.write("Invalid or empty input.\n")
+            continue
         edges = solve_hashi(grid)
         if edges is not None:
             write_solution(grid, edges, output_file)
