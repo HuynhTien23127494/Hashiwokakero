@@ -115,7 +115,27 @@ def generateCNF(grid):
                 cnf.append([-v1, -u2])
                 cnf.append([-v2, -u1])
                 cnf.append([-v2, -u2])
+                
+    # Ràng buộc hạn chế cô lập
+    for (x1, y1, x2, y2), (v1, v2) in edge_vars.items():
+        # Không nối 2 đảo 1
+        if island_map.get((x1, y1)) == 1 and island_map.get((x2, y2)) == 1:
+            cnf.append([-v1])
+            cnf.append([-v2])
+        # Không đặt cầu đôi ở 2 đảo 2
+        if island_map.get((x1, y1)) == 2 and island_map.get((x2, y2)) == 2:
+            cnf.append([-v2])
+            
+    # Đặt 4 cầu đôi ở đảo 8
+    for (x, y), total in island_map.items():
+        if total != 8:
+            continue
 
+        for (a, b, c, d), (v1, v2) in edge_vars.items():
+            if (a, b) == (x, y) or (c, d) == (x, y):
+                cnf.append([v1])
+                cnf.append([v2])
+                
     return {
         'cnf': cnf,
         'edge_vars': edge_vars,
