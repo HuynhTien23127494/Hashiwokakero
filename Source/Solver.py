@@ -191,96 +191,113 @@ def solve_hashi(grid):
 
     return None
 
-# Xác định các cạnh có thể nối
-def generate_possible_edges(grid):
-    rows, cols = len(grid), len(grid[0])
-    islands = [(x, y, grid[x][y]) for x in range(rows) for y in range(cols) if grid[x][y] > 0]
-    edges = []
-
-    for i, (x1, y1, _) in enumerate(islands):
-        for j in range(i + 1, len(islands)):
-            x2, y2, _ = islands[j]
-            if x1 == x2 and all(grid[x1][k] == 0 for k in range(min(y1, y2) + 1, max(y1, y2))):
-                edges.append(((x1, y1), (x2, y2)))
-            elif y1 == y2 and all(grid[k][y1] == 0 for k in range(min(x1, x2) + 1, max(x1, x2))):
-                edges.append(((x1, y1), (x2, y2)))
-    return edges
-
-def island_degree(edges, island):
-    return sum(w for e1, e2, w in edges if e1 == island or e2 == island)
-
-#Giải brute-force
 def solve_brute_force(grid):
-    print("Running brute-force...")
+    print("Running brute-force with CNF...")
     start = time.time()
     tracemalloc.start()
 
-    edges_possible = generate_possible_edges(grid)
-    weights = [0, 1, 2]  # 0 = không nối, 1 = 1 cầu, 2 = 2 cầu
+    data = generateCNF(grid)
+    edge_vars = data['edge_vars']
+    reverse_map = data['reverse_map']
+    islands = data['island_map']
 
-    islands = {(x, y): grid[x][y] for x in range(len(grid)) for y in range(len(grid[0])) if grid[x][y] > 0}
-    for combination in itertools.product(weights, repeat=len(edges_possible)):
-        used_edges = []
-        for i, w in enumerate(combination):
-            if w > 0:
-                used_edges.append((edges_possible[i][0][0], edges_possible[i][0][1],
-                                   edges_possible[i][1][0], edges_possible[i][1][1], w))
-        if not is_connected(used_edges, islands):
+    all_edges = list(edge_vars.items())
+    options = [0, 1, 2]  # 0: không nối, 1 cầu, 2 cầu
+
+    for combo in itertools.product(options, repeat=len(all_edges)):
+        assignment = {}
+        active_edges = []
+
+        for i, w in enumerate(combo):
+            (x1, y1, x2, y2), (v1, v2) = all_edges[i]
+            if w == 1:
+                assignment[v1] = True
+                assignment[v2] = False
+                active_edges.append((x1, y1, x2, y2, 1))
+            elif w == 2:
+                assignment[v1] = False
+                assignment[v2] = True
+                active_edges.append((x1, y1, x2, y2, 2))
+            else:
+                assignment[v1] = False
+                assignment[v2] = False
+
+        # Kiểm tra tổng số cầu
+        degree = {k: 0 for k in islands}
+        for x1, y1, x2, y2, w in active_edges:
+            degree[(x1, y1)] += w
+            degree[(x2, y2)] += w
+        if any(degree[pos] != islands[pos] for pos in islands):
             continue
-        degree_check = True
-        deg = {k: 0 for k in islands}
-        for x1, y1, x2, y2, w in used_edges:
-            deg[(x1, y1)] += w
-            deg[(x2, y2)] += w
-        for pos in islands:
-            if deg[pos] != islands[pos]:
-                degree_check = False
-                break
-        if degree_check:
-            current, peak = tracemalloc.get_traced_memory()
-            tracemalloc.stop()
-            print(f"Brute-force finished in {time.time() - start:.2f}s, memory: {peak / 1024:.2f} KB")
-            return used_edges
+
+        # Kiểm tra liên thông
+        if not is_connected(active_edges, islands):
+            continue
+
+        current, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        print(f"Brute-force CNF finished in {time.time() - start:.2f}s, memory: {peak / 1024:.2f} KB")
+        return active_edges
+
     tracemalloc.stop()
-    print("Brute-force found no solution")
+    print("Brute-force CNF found no solution")
     return None
 
 #Giải bằng backtracking
 def solve_backtracking(grid):
-    print("Running backtracking...")
+    print("Running backtracking with CNF...")
     start = time.time()
     tracemalloc.start()
 
-    edges_possible = generate_possible_edges(grid)
-    islands = {(x, y): grid[x][y] for x in range(len(grid)) for y in range(len(grid[0])) if grid[x][y] > 0}
+    data = generateCNF(grid)
+    edge_vars = list(data['edge_vars'].items())
+    islands = data['island_map']
 
-    def backtrack(idx, current_edges, degree):
-        if idx == len(edges_possible):
-            if all(degree[pos] == islands[pos] for pos in islands) and is_connected(current_edges, islands):
-                return current_edges
+    def backtrack(idx, assignment, active_edges, degree):
+        if idx == len(edge_vars):
+            if all(degree[pos] == islands[pos] for pos in islands) and is_connected(active_edges, islands):
+                return active_edges
             return None
 
-        e1, e2 = edges_possible[idx]
+        (x1, y1, x2, y2), (v1, v2) = edge_vars[idx]
+
         for w in [0, 1, 2]:
             degree_copy = degree.copy()
-            if w > 0:
-                degree_copy[e1] += w
-                degree_copy[e2] += w
-                if degree_copy[e1] > islands[e1] or degree_copy[e2] > islands[e2]:
+            edges_copy = active_edges[:]
+            assign_copy = assignment.copy()
+
+            if w == 1:
+                degree_copy[(x1, y1)] += 1
+                degree_copy[(x2, y2)] += 1
+                if degree_copy[(x1, y1)] > islands[(x1, y1)] or degree_copy[(x2, y2)] > islands[(x2, y2)]:
                     continue
-                current_edges.append((e1[0], e1[1], e2[0], e2[1], w))
-            result = backtrack(idx + 1, current_edges[:], degree_copy)
+                assign_copy[v1] = True
+                assign_copy[v2] = False
+                edges_copy.append((x1, y1, x2, y2, 1))
+            elif w == 2:
+                degree_copy[(x1, y1)] += 2
+                degree_copy[(x2, y2)] += 2
+                if degree_copy[(x1, y1)] > islands[(x1, y1)] or degree_copy[(x2, y2)] > islands[(x2, y2)]:
+                    continue
+                assign_copy[v1] = False
+                assign_copy[v2] = True
+                edges_copy.append((x1, y1, x2, y2, 2))
+            else:
+                assign_copy[v1] = False
+                assign_copy[v2] = False
+
+            result = backtrack(idx + 1, assign_copy, edges_copy, degree_copy)
             if result:
                 return result
-            if w > 0:
-                current_edges.pop()
+
         return None
 
     init_degree = {k: 0 for k in islands}
-    result = backtrack(0, [], init_degree)
+    result = backtrack(0, {}, [], init_degree)
+
     current, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
-    print(f"Backtracking finished in {time.time() - start:.2f}s, memory: {peak / 1024:.2f} KB")
+    print(f"Backtracking CNF finished in {time.time() - start:.2f}s, memory: {peak / 1024:.2f} KB")
     return result
 
 if __name__ == '__main__':
@@ -301,15 +318,12 @@ if __name__ == '__main__':
 
     #Với thuật toán brute-force và backtracking với độ phức tạp thời gian là 0(3^E) E là số cạnh tiềm năng
     #Brute-force nên chạy khi E <= 12 còn backtracking nên chạy khi E <= 18. Vì thế brute chỉ nên chạy chạy đc input-01
-    for i in range(1, 3): 
+    for i in range(1, 2): 
         input_file = f"Source\\Inputs\\input-{i:02}.txt"
         output_file_bf = f"Source\\Outputs\\output_bf-{i:02}.txt"
-        output_file_bt = f"Source\\Outputs\\output_bt-{i:02}.txt"
         grid = read_input(input_file)
         if not grid:
             with open(output_file_bf, 'w') as f:
-                f.write("Invalid or empty input.\n")
-            with open(output_file_bt, 'w') as f:
                 f.write("Invalid or empty input.\n")
             continue
 
@@ -319,6 +333,15 @@ if __name__ == '__main__':
         else:
             with open(output_file_bf, 'w') as f:
                 f.write("No solution found\n")
+    
+    for i in range(1, 3): 
+        input_file = f"Source\\Inputs\\input-{i:02}.txt"
+        output_file_bt = f"Source\\Outputs\\output_bt-{i:02}.txt"
+        grid = read_input(input_file)
+        if not grid:
+            with open(output_file_bt, 'w') as f:
+                f.write("Invalid or empty input.\n")
+            continue
         
         edges = solve_backtracking(grid)
         if edges is not None:
