@@ -91,7 +91,7 @@ def solve_cnf_astar(data):
             return assignment
 
         unassigned_vars = [v for v in range(1, total_vars + 1) if v not in assignment]
-        if not unassigned_vars:     # Gán tất cả biến nhương chưa thỏa hết MĐ
+        if not unassigned_vars:     # Gán tất cả biến nhưng chưa thỏa hết MĐ
             continue
 
         # Expand

@@ -1,7 +1,7 @@
 from pysat.card import CardEnc
 from pysat.formula import IDPool
 from collections import defaultdict, deque
-
+from itertools import combinations
 # Kiểm tra 2 cạnh cắt nhau
 def edges_cross(e1, e2):
     (x1, y1, x2, y2) = e1
@@ -59,8 +59,15 @@ def generateCNF(grid):
         for var, weight in vars_for_island:
             expanded.extend([var] * weight)
         if expanded:
-            card = CardEnc.equals(lits=expanded, bound=total, vpool=vpool, encoding=1)
-            cnf.extend(card.clauses)
+            if rows <= 5 and cols <= 5:
+                # Map nhỏ: dùng tổ hợp thủ công
+                cnf += [[-lit for lit in comb] for comb in combinations(expanded, total + 1)]
+                cnf += [list(comb) for comb in combinations(expanded, len(expanded) - total + 1)]
+            else:
+                # Map lớn: dùng CardEnc
+                from pysat.card import CardEnc
+                cnf.extend(CardEnc.equals(lits=expanded, bound=total, vpool=vpool).clauses)
+                
     # Ràng buộc không cắt nhau
     edges = list(edge_vars.keys())
     for i in range(len(edges)):
