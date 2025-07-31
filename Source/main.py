@@ -2,6 +2,8 @@ import sys
 sys.stdout.reconfigure(encoding='utf-8')
 from pySAT_solver import solve_pysat
 from astar_solver import solve_astar
+from backtracking_solver import solve_backtracking
+from brute_force_solver import solve_bruteforce
 
 def read_input(filename):
     with open(filename, 'r') as f:
@@ -36,7 +38,7 @@ if __name__ == '__main__':
             with open(output_file, 'w') as f:
                 f.write("Invalid or empty input.\n")
             continue
-        edges = solve_astar(grid)
+        edges = solve_backtracking(grid)
         if edges is not None:
             write_solution(grid, edges, output_file)
         else:
