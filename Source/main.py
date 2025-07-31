@@ -30,7 +30,7 @@ def write_solution(grid, edges, output_file):
             f.write('[ ' + ' , '.join(f'"{cell}"' for cell in row) + ' ]\n')
 
 if __name__ == '__main__':
-    for i in range(1, 11): 
+    for i in range(1,2): 
         input_file = f"Inputs/input-{i:02}.txt"
         output_file = f"Outputs/output-{i:02}.txt"
         grid = read_input(input_file)
@@ -38,7 +38,10 @@ if __name__ == '__main__':
             with open(output_file, 'w') as f:
                 f.write("Invalid or empty input.\n")
             continue
-        edges = solve_backtracking(grid)
+        # edges = solve_backtracking(grid)
+        # edges = solve_astar(grid)
+        edges = solve_pysat(grid)
+        # edges = solve_bruteforce(grid)
         if edges is not None:
             write_solution(grid, edges, output_file)
         else:

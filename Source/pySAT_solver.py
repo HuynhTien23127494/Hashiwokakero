@@ -1,7 +1,9 @@
 from pysat.solvers import Solver
 from generator import generateCNF, is_connected
+import time
 
 def solve_pysat(grid):
+    start_time = time.perf_counter()
     if not grid or not grid[0]:
         print("Empty or invalid grid.")
         return None
@@ -24,6 +26,9 @@ def solve_pysat(grid):
                 blocking_clause.append(-lit)
 
         if is_connected(active_edges, data['island_map']):
+            end_time = time.perf_counter()
+            elapsed = end_time - start_time
+            print(f"[PySAT] Solved in {elapsed:.4f} seconds")
             return active_edges
         else:
             solver.add_clause(blocking_clause)

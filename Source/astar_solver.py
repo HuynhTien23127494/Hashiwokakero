@@ -2,6 +2,7 @@ import heapq
 from collections import defaultdict
 import itertools
 from generator import generateCNF, is_connected
+import time
 
 def unit_propagation(clauses, assignment):
     changed = True
@@ -118,7 +119,7 @@ def solve_astar(grid):
     if not grid or not grid[0]:
         print("Empty or invalid grid.")
         return None
-
+    start_time = time.perf_counter()
     data = generateCNF(grid)
     while True:
         assignment = solve_cnf_astar(data)
@@ -134,6 +135,10 @@ def solve_astar(grid):
                 blocking_clause.append(-var)
 
         if is_connected(active_edges, data['island_map']):
+            end_time = time.perf_counter()
+            elapsed = end_time - start_time
+            print(f"[A*] Solved in {elapsed:.4f} seconds")
             return active_edges
 
         data['cnf'].append(blocking_clause)
+        
