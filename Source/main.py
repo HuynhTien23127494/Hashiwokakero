@@ -30,20 +30,85 @@ def write_solution(grid, edges, output_file):
             f.write('[ ' + ' , '.join(f'"{cell}"' for cell in row) + ' ]\n')
 
 if __name__ == '__main__':
-    for i in range(1,2): 
-        input_file = f"Inputs/input-{i:02}.txt"
-        output_file = f"Outputs/output-{i:02}.txt"
+    print("=== Hashiwokakero Solver ===")
+    print("Welcome to the Hashiwokakero puzzle solver!")
+    
+    while True:
+        # First prompt: Select input file
+        print("\n" + "="*40)
+        print("Available input files: 1-10")
+        try:
+            input_choice = input("Please select an input file (1-10) or 'q' to quit: ").strip()
+            
+            if input_choice.lower() == 'q':
+                print("Goodbye!")
+                break
+                
+            input_num = int(input_choice)
+            if input_num < 1 or input_num > 10:
+                print("Invalid input! Please enter a number between 1 and 10.")
+                continue
+                
+        except ValueError:
+            print("Invalid input! Please enter a valid number between 1 and 10.")
+            continue
+        
+        # Second prompt: Select solving method
+        print("\n" + "="*40)
+        print("Available solving methods:")
+        print("1. pySAT")
+        print("2. Brute Force")
+        print("3. Backtracking")
+        print("4. A*")
+        print("5. Exit")
+        
+        try:
+            method_choice = input("Please select a solving method (1-5): ").strip()
+            
+            if method_choice == '5':
+                print("Goodbye!")
+                break
+                
+            method_num = int(method_choice)
+            if method_num < 1 or method_num > 4:
+                print("Invalid choice! Please enter a number between 1 and 4.")
+                continue
+                
+        except ValueError:
+            print("Invalid input! Please enter a valid number between 1 and 4.")
+            continue
+        
+        # Process the selected input and method
+        input_file = f"Inputs/input-{input_num:02}.txt"
+        output_file = f"Outputs/output-{input_num:02}.txt"
+        
+        print(f"\nProcessing input file: {input_file}")
+        print(f"Using method: {['pySAT', 'Brute Force', 'Backtracking', 'A*'][method_num-1]}")
+        
         grid = read_input(input_file)
         if not grid:
             with open(output_file, 'w') as f:
                 f.write("Invalid or empty input.\n")
+            print("Error: Invalid or empty input file.")
             continue
-        # edges = solve_backtracking(grid)
-        # edges = solve_astar(grid)
-        edges = solve_pysat(grid)
-        # edges = solve_bruteforce(grid)
+        
+        # Solve using selected method
+        edges = None
+        if method_num == 1:
+            edges = solve_pysat(grid)
+        elif method_num == 2:
+            edges = solve_bruteforce(grid)
+        elif method_num == 3:
+            edges = solve_backtracking(grid)
+        elif method_num == 4:
+            edges = solve_astar(grid)
+        
         if edges is not None:
             write_solution(grid, edges, output_file)
+            print(f"Solution found and saved to: {output_file}")
         else:
             with open(output_file, 'w') as f:
                 f.write("No solution found\n")
+            print("No solution found for this puzzle.")
+        
+        print("\n" + "="*40)
